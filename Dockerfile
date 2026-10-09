@@ -1,5 +1,5 @@
 # Stage 1: build client and server
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN npm run build && npm prune --omit=dev --prefix server
 
 
 # Stage 2: runtime
-FROM node:22-alpine AS production
+FROM node:25-alpine AS production
 
 WORKDIR /app
 ENV NODE_ENV=production \
