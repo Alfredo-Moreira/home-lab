@@ -1,0 +1,314 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/hanken-grotesk';
+@import '@fontsource-variable/jetbrains-mono';
+
+/*
+ * "Clean room": a light, lab-dashboard theme. White cards on a pale blue-gray
+ * canvas, navy ink, one blue accent. Monospace is reserved for data (latency,
+ * hashes, container names) so numbers line up and read as machine output.
+ *
+ * Fonts are self-hosted (fontsource), so the CSP stays 'self' and visitors
+ * make no third-party requests. All text tokens pass WCAG AA on every surface.
+ */
+
+@theme {
+  --font-sans: 'Hanken Grotesk Variable', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+
+  --color-bg: #f3f6fb;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef3f9;
+  --color-fg: #0f1b2d;
+  --color-muted: #5a6a7f;
+  --color-line: #dde4ee;
+  --color-line-strong: #c3cedd;
+
+  --color-accent: #1f63d6;
+  --color-accent-dim: #1a54b8;
+  --color-accent-soft: #e6effd;
+  --color-accent-2: #076b98;
+
+  /*
+   * Status is a fixed scale with reserved meaning (dataviz palette steps), never
+   * reused as decoration, and always shown with an icon + label, never color
+   * alone (warning is below 3:1 on white by design; the label carries it).
+   */
+  --color-good: #0ca30c;
+  --color-warning: #fab219;
+  --color-critical: #d03b3b;
+
+  --radius-xs: 4px;
+
+  --shadow-card: 0 1px 2px rgba(15, 27, 45, 0.05), 0 8px 24px -16px rgba(15, 27, 45, 0.18);
+
+  /* One motion language: entering/exiting ease-out, on-screen movement in-out. */
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  ::selection {
+    background: rgba(31, 99, 214, 0.18);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+/* Faint blueprint grid behind the page header: the "lab" backdrop. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, var(--color-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-line) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+@utility mask-radial {
+  mask-image: radial-gradient(ellipse at top, #000 20%, transparent 70%);
+}
+
+@utility headline-balance {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+/* Press feedback for anything clickable (160ms, ease-out, listed properties only). */
+@utility pressable {
+  transition-property: transform, color, background-color, border-color, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: var(--ease-out-strong);
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/*
+ * First-visit entrance for the overview's KPI row only: once per session
+ * (rare, see firstVisit()), staggered 50ms by the caller. Never on navigation.
+ */
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@utility reveal {
+  animation: reveal 400ms var(--ease-out-strong) both;
+}
+
+/* Live indicator in the sidebar: communicates "this data is live", so it may loop. */
+@keyframes ping-soft {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+@utility ping-soft {
+  animation: ping-soft 2s var(--ease-out-strong) infinite;
+}
+
+/*
+ * Live values. When a polled number changes it settles in (blur bridges the
+ * old and new value, Emil's crossfade trick). Small and fast: it repeats.
+ */
+@keyframes value-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+    transform: translateY(3px);
+  }
+}
+.value-in {
+  display: inline-block;
+  animation: value-in 180ms var(--ease-out-strong) both;
+}
+
+/* Status badge swap when a service changes state. */
+@keyframes state-in {
+  from {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
+.state-in {
+  animation: state-in 200ms var(--ease-out-strong) both;
+}
+
+/* First visit only: each uptime strip wipes in left to right, oldest hour first. */
+@keyframes strip-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.strip-reveal {
+  animation: strip-reveal 360ms var(--ease-out-strong) both;
+}
+
+/* First visit only: a meter fills to its value (the motion explains the ratio). */
+@keyframes meter-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(var(--v));
+  }
+}
+.meter-fill {
+  transform-origin: left;
+  transform: scaleX(var(--v));
+  transition: transform 300ms var(--ease-out-strong);
+}
+.meter-fill.meter-enter {
+  animation: meter-fill 450ms var(--ease-out-strong) both;
+}
+
+/* Tooltips grow out of the mark they describe; no delay, so scrubbing feels instant. */
+.tip {
+  transform-origin: bottom center;
+  transition:
+    opacity 125ms var(--ease-out-strong),
+    transform 125ms var(--ease-out-strong);
+}
+.tip-right {
+  transform-origin: bottom right;
+}
+@starting-style {
+  .tip {
+    opacity: 0;
+    transform: translateY(2px) scale(0.97);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ping-soft {
+    animation: none;
+  }
+  .reveal,
+  .strip-reveal,
+  .value-in,
+  .state-in {
+    animation: fade-in 200ms ease both;
+  }
+  .meter-fill.meter-enter {
+    animation: none;
+  }
+  .tip {
+    transition: opacity 125ms ease;
+  }
+  .pressable:active {
+    transform: none;
+  }
+}
+
+/* Build-log Markdown. Rendered without raw HTML (react-markdown default). */
+.prose-log {
+  line-height: 1.7;
+  color: color-mix(in oklab, var(--color-fg) 88%, transparent);
+}
+.prose-log > * + * {
+  margin-top: 1rem;
+}
+.prose-log h2 {
+  margin-top: 2rem;
+  font-size: 1.25rem;
+  font-weight: 650;
+  color: var(--color-fg);
+  letter-spacing: -0.01em;
+}
+.prose-log h3 {
+  margin-top: 1.5rem;
+  font-weight: 600;
+  color: var(--color-fg);
+}
+.prose-log a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.prose-log ul,
+.prose-log ol {
+  padding-left: 1.25rem;
+}
+.prose-log ul {
+  list-style: square;
+}
+.prose-log ol {
+  list-style: decimal;
+}
+.prose-log li + li {
+  margin-top: 0.375rem;
+}
+.prose-log li::marker {
+  color: var(--color-accent);
+}
+.prose-log strong {
+  color: var(--color-fg);
+}
+.prose-log code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+}
+.prose-log pre {
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 4px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-line);
+}
+.prose-log pre code {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+.prose-log blockquote {
+  border-left: 2px solid var(--color-accent);
+  padding-left: 1rem;
+  color: var(--color-muted);
+}
+.prose-log table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+.prose-log th,
+.prose-log td {
+  border-bottom: 1px solid var(--color-line);
+  padding: 0.5rem;
+  text-align: left;
+}

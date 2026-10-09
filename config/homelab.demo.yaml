@@ -1,0 +1,157 @@
+# DEMO config: everything points at the fake homelab in demo/mock-server.mjs.
+# Used by docker-compose.demo.yml and `npm run dev:demo`. Not for the NAS.
+# MOCK_URL defaults to the compose service name; dev:demo sets it to localhost.
+
+site:
+  title: homelab
+  tagline: A 4-bay ARM NAS running my apps, my house, and my experiments. Shipped like prod.
+  owner:
+    name: Alfredo Moreira
+    handle: alfredo
+    role: Software engineer
+    # location: City, ST
+    bio: >-
+      I build software for a living and run a small homelab for fun. This box
+      hosts the apps I write, the automations that run my house, and whatever
+      I'm learning this month. Everything is containerized, versioned and
+      deployed with the same care I'd give a production system.
+  links:
+    - { label: Portfolio, url: "https://alfredomoreira.dev", kind: portfolio }
+    - { label: GitHub, url: "https://github.com/Alfredo-Moreira", kind: github }
+    - { label: LinkedIn, url: "https://www.linkedin.com/in/alfredomoreira/", kind: linkedin }
+    - { label: Instagram, url: "https://www.instagram.com/alfredo.r.moreira/", kind: instagram }
+
+hardware:
+  - group: Compute
+    items:
+      - name: UGREEN NASync DH4300 Plus
+        detail: Rockchip RK3588C, 8-core ARM (4× A76 + 4× A55), 8 GB LPDDR4X, 32 GB eMMC for UGOS Pro
+        why: Low idle power for an always-on box, and arm64 is a fun constraint, since every image I ship is built multi-arch.
+  - group: Storage
+    items:
+      - name: 4 × SATA bays
+        detail: 2.5"/3.5" drives, RAID 0/1/5/6/10 or JBOD, up to 128 TB raw # TODO: list your actual drives and RAID level
+        why: Room to grow, plus redundancy so one dead drive is a shrug, not a weekend.
+  - group: Network
+    items:
+      - name: 2.5 GbE
+        detail: Single 2.5 GbE port, backwards compatible with 1 GbE
+      - name: Cloudflare Tunnel
+        detail: Outbound-only tunnel; no ports forwarded on the router
+        why: The house has no open inbound ports. Public sites ride an outbound connection to Cloudflare's edge.
+  - group: I/O
+    items:
+      - name: Ports
+        detail: HDMI (4K), USB-C 3.2 Gen 1, 2 × USB-A 3.2 Gen 1
+
+stack:
+  - name: Docker
+    role: Runtime for every service
+    why: Every app is an image with a pinned version; rollback is changing a tag.
+    href: https://www.docker.com
+  - name: Cloudflare Tunnel
+    role: Public ingress
+    why: Exposes selected sites without opening ports, with Cloudflare TLS and DDoS protection in front.
+    href: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+  - name: Zoraxy
+    role: Reverse proxy
+    why: One place to route hostnames to containers, for both tunnel traffic and LAN-only hosts.
+    href: https://zoraxy.aroz.org
+  - name: Home Assistant
+    role: Home automation
+    why: Local-first automations that keep working when the internet doesn't.
+    href: https://www.home-assistant.io
+  - name: MongoDB
+    role: Shared database
+    why: One instance on the bridge network serves the apps that need a document store.
+    href: https://www.mongodb.com
+  - name: Private registry
+    role: Image storage
+    why: Images are built multi-arch on my laptop and pulled by the NAS, so the NAS never builds.
+  - name: Glances
+    role: Metrics
+    why: Lightweight system metrics over a REST API; it powers the live numbers on this page.
+    href: https://nicolargo.github.io/glances/
+
+services:
+  - id: homelab
+    name: homelab
+    description: This site. Live status for the box it runs on.
+    category: dev
+    visibility: public
+    url: https://lab.example.com
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/homelab" }
+
+  - id: portfolio
+    name: Portfolio
+    description: My personal site, résumé and blog.
+    category: apps
+    visibility: public
+    url: https://example.com
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/portfolio" }
+
+  - id: analytics
+    name: Analytics
+    description: Self-hosted, privacy-friendly web analytics (Matomo). Slow spells every few minutes.
+    category: infra
+    visibility: public
+    url: https://analytics.example.com
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/analytics", degradedMs: 1500 }
+
+  - id: macroleaf
+    name: MacroLeaf
+    description: Meal planning and nutrition tracking app I built. Flaky on purpose in the demo.
+    category: apps
+    visibility: internal
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/macroleaf" }
+
+  - id: home-assistant
+    name: Home Assistant
+    description: Automations, sensors and dashboards for the house.
+    category: home
+    visibility: internal
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/home-assistant" }
+
+  - id: zoraxy
+    name: Zoraxy
+    description: Reverse proxy that routes every hostname to its container.
+    category: infra
+    visibility: internal
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/zoraxy", expect: [401] }
+
+  - id: jellyfin
+    name: Jellyfin
+    description: Media server. Goes down for 3 minutes in every 20 in the demo.
+    category: media
+    visibility: internal
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/jellyfin" }
+
+  - id: ugos
+    name: UGOS Pro
+    description: The NAS's own management UI.
+    category: infra
+    visibility: internal
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/ugos" }
+
+  - id: registry
+    name: Container registry
+    description: Private Docker registry the NAS pulls every image from.
+    category: dev
+    visibility: internal
+    check: { url: "${MOCK_URL:-http://mock:9000}/svc/registry" }
+
+checks:
+  intervalSeconds: 30
+  retentionDays: 30
+
+nas:
+  glancesUrl: ${MOCK_URL:-http://mock:9000}
+  volumes:
+    - { mount: /volume1, label: Volume 1 · RAID 5 }
+    - { mount: /volume2, label: NVMe cache }
+
+docker:
+  proxyUrl: ${MOCK_URL:-http://mock:9000}
+  hide:
+    - "*docker-proxy*"
+    - "*glances*"

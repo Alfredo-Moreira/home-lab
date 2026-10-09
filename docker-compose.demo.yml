@@ -1,0 +1,62 @@
+## LOCAL DEMO: the site with fake data, no NAS needed.
+##
+##   docker compose -f docker-compose.demo.yml up --build
+##   open http://localhost:3080
+##
+## `mock` fakes Glances, the Docker socket proxy and every service endpoint;
+## `seed` backfills 30 days of check history once, then exits.
+name: homelab-demo
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - demo-mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  mock:
+    image: node:22-alpine
+    restart: unless-stopped
+    command: ["node", "/demo/mock-server.mjs"]
+    volumes:
+      - ./demo:/demo:ro
+    ports:
+      - "9000:9000" # optional: poke the fake APIs from your machine
+
+  seed:
+    build: .
+    command: ["node", "server/dist/seed.js"]
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/homelab-demo
+      - CONFIG_PATH=/app/config/homelab.demo.yaml
+    volumes:
+      - ./config:/app/config:ro
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: "no"
+
+  homelab:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3080:3080"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/homelab-demo
+      - CONFIG_PATH=/app/config/homelab.demo.yaml
+      - RATE_LIMIT_PER_MIN=5000 # e2e tests hit the API hard from one IP
+    volumes:
+      - ./config:/app/config:ro
+    depends_on:
+      mock:
+        condition: service_started
+      seed:
+        condition: service_completed_successfully
+
+volumes:
+  demo-mongo:

@@ -1,0 +1,14 @@
+# Code owners: requested automatically as reviewers on PRs that touch these paths.
+# Later rules override earlier ones. Syntax: https://docs.github.com/articles/about-code-owners
+
+*                          @Alfredo-Moreira
+
+# Public-exposure boundary: anything that decides what leaves the server.
+/server/src/app.ts         @Alfredo-Moreira
+/server/src/config.ts      @Alfredo-Moreira
+/server/src/docker.ts      @Alfredo-Moreira
+/server/src/nas.ts         @Alfredo-Moreira
+/docker-compose.nas.yml    @Alfredo-Moreira
+
+# Repo health and CI.
+/.github/                  @Alfredo-Moreira

@@ -1,0 +1,63 @@
+## TO BE USED IN THE NAS ENVIRONMENT ONLY
+##
+## Expects: the external `nas-bridge` network with MongoDB as `mongo-nas`
+## (shared with MacroLeaf), and ./config/homelab.yaml next to this file.
+## Point Zoraxy at http://<nas-ip>:3080 and give it a public hostname in the
+## Cloudflare tunnel. Never route Glances (61208) or the socket proxy publicly.
+services:
+  homelab:
+    image: 192.168.4.79:5000/homelab:v1.0.0
+    platform: linux/arm64
+    container_name: homelab
+    restart: unless-stopped
+    ports:
+      - "3080:3080"
+    environment:
+      - MONGODB_URI=mongodb://mongo-nas:27017/homelab
+      - GLANCES_URL=http://host.docker.internal:61208
+      - DOCKER_PROXY_URL=http://homelab-docker-proxy:2375
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./config:/app/config:ro
+      - ./content/log:/app/content/log:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - nas-bridge
+    depends_on:
+      - docker-socket-proxy
+
+  # Host network so it sees the real NIC throughput. Listens on :61208 on the LAN
+  # only (API, no web UI); keep it out of Zoraxy and the tunnel.
+  glances:
+    image: nicolargo/glances:latest
+    container_name: homelab-glances
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    environment:
+      - GLANCES_OPT=-w --disable-webui
+    volumes:
+      - /volume1:/volume1:ro # TODO: one line per UGOS volume listed in config nas.volumes
+      - /etc/os-release:/etc/os-release:ro
+
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:latest
+    container_name: homelab-docker-proxy
+    restart: unless-stopped
+    environment:
+      - CONTAINERS=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - nas-bridge
+
+networks:
+  nas-bridge:
+    external: true

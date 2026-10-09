@@ -1,0 +1,21 @@
+{
+  "name": "home-lab",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n server,client -c yellow,cyan \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "dev:demo": "concurrently -n mock,server,client -c magenta,yellow,cyan \"node demo/mock-server.mjs\" \"MOCK_URL=http://localhost:9000 CONFIG_PATH=../config/homelab.demo.yaml npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "demo": "docker compose -f docker-compose.demo.yml up --build",
+    "demo:down": "docker compose -f docker-compose.demo.yml down -v",
+    "build": "npm run build --prefix client && npm run build --prefix server",
+    "start": "npm run start --prefix server",
+    "test": "npm test --prefix server && npm test --prefix client",
+    "lint": "npm run lint --prefix client && npm run typecheck --prefix client && npm run typecheck --prefix server",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:e2e": "npm test --prefix e2e"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.5",
+    "prettier": "^3.9.9"
+  }
+}

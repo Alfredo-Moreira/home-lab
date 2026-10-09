@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+.env
+.env.*
+!.env.example
+# Real config holds internal hostnames/IPs for health checks; only the example is committed.
+config/homelab.yaml
+# Playwright output
+e2e/test-results/
+e2e/playwright-report/
