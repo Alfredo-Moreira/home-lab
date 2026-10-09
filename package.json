@@ -15,7 +15,7 @@
     "test:e2e": "npm test --prefix e2e"
   },
   "devDependencies": {
-    "concurrently": "^9.2.5",
+    "concurrently": "^10.0.5",
     "prettier": "^3.9.9"
   }
 }
