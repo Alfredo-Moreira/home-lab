@@ -23,8 +23,8 @@ jobs:
     name: Format (Prettier)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -39,8 +39,8 @@ jobs:
       run:
         working-directory: server
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -62,8 +62,8 @@ jobs:
       run:
         working-directory: client
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -84,7 +84,7 @@ jobs:
     name: Compose files and scripts
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Compose files are valid
         run: |
           for f in docker-compose.yml docker-compose.demo.yml docker-compose.nas.yml; do
@@ -106,13 +106,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [server, client]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: e2e/package-lock.json
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
       - name: Start the demo stack (mock NAS, seeded history; app runs read-only)
         run: docker compose -f docker-compose.demo.yml up -d --build --wait
       - name: Image runs as a non-root user
@@ -139,7 +139,7 @@ jobs:
       - name: Stack logs
         if: failure()
         run: docker compose -f docker-compose.demo.yml logs --no-color
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: playwright-report
