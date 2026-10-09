@@ -1,6 +1,7 @@
-# CI for the homelab site: formatting, the server, the client, the Docker
-# image (both architectures the NAS and laptops use), the compose files and
-# scripts, and end-to-end tests against the demo stack (fake data, no NAS).
+# CI for the homelab site: formatting, the server, the client, the compose
+# files and scripts, and end-to-end tests against the demo stack (fake data,
+# no NAS). The e2e job builds the production image, boots it read-only like
+# the NAS does, and checks the image itself.
 # Every job is read-only towards the repo; nothing is deployed from here: the
 # registry and the NAS live on the home LAN (see scripts/build-and-push.sh).
 name: CI
@@ -79,49 +80,6 @@ jobs:
       - name: Dependency audit (runtime, high and critical)
         run: npm audit --omit=dev --audit-level=high
 
-  image:
-    name: Docker image (amd64 + arm64)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-      - name: Build for both platforms (the NAS is arm64)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          cache-from: type=gha,scope=image
-          cache-to: type=gha,mode=max,scope=image
-      - name: Load the amd64 image for checks
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          tags: homelab:ci
-          load: true
-          cache-from: type=gha,scope=image
-      - name: Runs as a non-root user
-        run: |
-          uid=$(docker run --rm --entrypoint id homelab:ci -u)
-          if [ "$uid" = "0" ]; then echo "::error::image runs as root"; exit 1; fi
-      - name: No real config baked in (it holds internal hostnames)
-        run: |
-          if docker run --rm --entrypoint sh homelab:ci -c 'test -e /app/config/homelab.yaml'; then
-            echo "::error::config/homelab.yaml is inside the image"; exit 1
-          fi
-      - name: Boots read-only and turns healthy
-        run: |
-          docker run -d --name smoke --read-only --tmpfs /tmp --cap-drop ALL -p 3080:3080 homelab:ci
-          for i in $(seq 1 30); do
-            status=$(docker inspect -f '{{.State.Health.Status}}' smoke)
-            [ "$status" = "healthy" ] && break
-            sleep 2
-          done
-          docker logs smoke
-          test "$status" = "healthy"
-          curl -fsS localhost:3080/api/health
-          curl -fsS localhost:3080/ | grep -q '<div id="root">'
-
   compose-and-scripts:
     name: Compose files and scripts
     runs-on: ubuntu-latest
@@ -155,8 +113,18 @@ jobs:
           cache: npm
           cache-dependency-path: e2e/package-lock.json
       - uses: docker/setup-buildx-action@v3
-      - name: Start the demo stack (mock NAS, seeded history)
+      - name: Start the demo stack (mock NAS, seeded history; app runs read-only)
         run: docker compose -f docker-compose.demo.yml up -d --build --wait
+      - name: Image runs as a non-root user
+        run: |
+          uid=$(docker compose -f docker-compose.demo.yml exec -T homelab id -u)
+          if [ "$uid" = "0" ]; then echo "::error::image runs as root"; exit 1; fi
+      - name: No real config baked into the image (it holds internal hostnames)
+        run: |
+          image=$(docker compose -f docker-compose.demo.yml images homelab --format json | jq -r '.[0] | "\(.Repository):\(.Tag)"')
+          if docker run --rm --entrypoint sh "$image" -c 'test -e /app/config/homelab.yaml'; then
+            echo "::error::config/homelab.yaml is inside the image"; exit 1
+          fi
       - name: Install Playwright
         working-directory: e2e
         run: |

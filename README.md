@@ -160,7 +160,7 @@ Then:
 
 Set `CHROME_PATH` to use an installed Chrome instead of Playwright's Chromium.
 
-CI (`.github/workflows/ci.yml`) runs all of this on every PR. It also builds the image for amd64 and arm64, checks that it runs non-root with no real config inside, boots it read-only until healthy, validates the compose files, and runs shellcheck on the scripts.
+CI (`.github/workflows/ci.yml`) runs all of this on every PR. The e2e job builds the production image and boots it read-only like the NAS does, and checks that it runs non-root with no real config inside. CI also validates the compose files and runs shellcheck on the scripts. Nothing is pushed: images reach the NAS registry only through `scripts/build-and-push.sh`.
 
 ## Motion
 

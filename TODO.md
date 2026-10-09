@@ -28,8 +28,8 @@ Open items from the initial build (2026-10-09). Nothing has been committed or pu
 
 ## Repo and CI
 
-- [ ] Review the code, then commit and push (remote: `Alfredo-Moreira/home-lab`).
-- [ ] Watch the first CI run on GitHub. It has only been run locally so far, and the arm64 image build in CI uses QEMU.
+- [x] Review the code, then commit and push (remote: `Alfredo-Moreira/home-lab`).
+- [ ] Watch the first CI run on GitHub. It has only been run locally so far.
 - [ ] `release.yml` creates a tag on every push to `main` (same as Ouril). Those tags are separate from the `VERSION` file that tags Docker images. Keep both, or drop one.
 - [ ] Optional: enable branch protection and "Require review from Code Owners".
 
