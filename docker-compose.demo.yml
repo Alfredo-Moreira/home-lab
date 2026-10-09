@@ -52,6 +52,14 @@ services:
       - RATE_LIMIT_PER_MIN=5000 # e2e tests hit the API hard from one IP
     volumes:
       - ./config:/app/config:ro
+    # Hardened like docker-compose.nas.yml, so CI proves the image boots this way.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       mock:
         condition: service_started
